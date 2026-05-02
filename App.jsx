@@ -1,7 +1,7 @@
 import React from 'react';
 import { useState, useEffect, useRef } from "react";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API_BASE = import.meta.env.VITE_API_URL || "oncoprev-backend-production.up.railway.app";
 const ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
 
 const palette = {
