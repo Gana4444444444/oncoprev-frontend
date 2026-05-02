@@ -1,8 +1,8 @@
 import React from 'react';
 import { useState, useEffect, useRef } from "react";
 
-const API_BASE = import.meta.env.VITE_API_URL || "oncoprev-backend-production.up.railway.app";
-const ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
+const API_BASE = import.meta.env.VITE_API_URL || "https://oncoprev-backend-production.up.railway.app/api/chat";
+const ANTHROPIC_MODEL = "claude-3-5-sonnet-20240620";
 
 const palette = {
   bg: "#0a0f1e", surface: "#111827", card: "#1a2233", border: "#2a3a55",
