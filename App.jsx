@@ -2,7 +2,7 @@ import React from 'react';
 import { useState, useEffect, useRef } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL || "https://oncoprev-backend-production.up.railway.app";
-const ANTHROPIC_MODEL = "claude-3-haiku-20240307";
+const ANTHROPIC_MODEL = "claude-opus-4-5";
 
 const palette = {
   bg: "#0a0f1e", surface: "#111827", card: "#1a2233", border: "#2a3a55",
