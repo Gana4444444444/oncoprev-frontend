@@ -4,6 +4,12 @@ import { useState, useEffect, useRef } from "react";
 const API_BASE = "https://oncoprev-backend-production.up.railway.app";
 const ANTHROPIC_MODEL = "claude-opus-4-5";
 
+const palette = {
+  bg: "#0a0f1e", surface: "#111827", card: "#1a2233", border: "#2a3a55",
+  accent: "#00c9a7", accent2: "#4f8ef7", accent3: "#f97316", text: "#e2e8f0",
+  muted: "#64748b", danger: "#ef4444", warn: "#f59e0b", success: "#22c55e",
+};
+
 const inputStyle = { background: "#1a2233", border: "1.5px solid #2a3a55", borderRadius: 10, color: "#e2e8f0", padding: "10px 14px", fontSize: 14, width: "100%", outline: "none", boxSizing: "border-box" };
 const labelStyle = { fontSize: 12, fontWeight: 600, color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, display: "block" };
 const cardStyle = { background: "#1a2233", border: "1px solid #2a3a55", borderRadius: 16, padding: "24px", marginBottom: 20 };
@@ -34,8 +40,9 @@ function RiskGauge({ score }) {
 }
 
 const CANCER_TYPES = ["Pulmao / Traqueia / Bronquio","Estomago","Colon e Reto","Figado","Mama","Prostata","Leucemia","Esofago","Pancreas","Cervix / Utero","Ovario","Bexiga","Rim","Melanoma / Pele","Linfoma","Outros"];
-const DOENCAS_COMUNS = ["Pressao Alta (Hipertensao)","Diabetes Tipo 1","Diabetes Tipo 2","Colesterol Alto (Dislipidemia)","Hipotireoidismo","Hipertireoidismo","Lupus","Fibromialgia","Artrite Reumatoide"];
-const ALIMENTOS_RISCO = ["Embutidos (salsicha, linguica, presunto)","Ultraprocessados (salgadinhos, biscoitos)","Carne vermelha em excesso","Bebidas acucaradas","Alimentos defumados ou salgados","Baixo consumo de frutas e verduras","Baixo consumo de fibras"];
+const CHOLESTEROL_OPTS = [{ value: "1", label: "Normal" },{ value: "2", label: "Acima do Normal" },{ value: "3", label: "Muito Acima do Normal" }];
+const GLUC_OPTS = [{ value: "1", label: "Normal" },{ value: "2", label: "Acima do Normal" },{ value: "3", label: "Muito Acima do Normal" }];
+const BP_CATS = [{ label: "Normal (<120/80)", value: "normal" },{ label: "Pre-hipertensao (120-139/80-89)", value: "pre" },{ label: "Hipertensao Grau 1 (140-159/90-99)", value: "h1" },{ label: "Hipertensao Grau 2 (>=160/100)", value: "h2" },{ label: "Crise hipertensiva (>=180/120)", value: "crisis" }];
 const FAMILY_HISTORY = ["Nenhum","Cancer de pulmao","Cancer de mama","Cancer colorretal","Cancer gastrico","Cancer de prostata","Leucemia","Outro tipo de cancer"];
 const SMOKE_OPTS = [{ value: "0", label: "Nao fumante" },{ value: "1", label: "Ex-fumante" },{ value: "2", label: "Fumante ocasional" },{ value: "3", label: "Fumante regular" }];
 const ALCO_OPTS = [{ value: "0", label: "Abstemio" },{ value: "1", label: "Consumo leve" },{ value: "2", label: "Consumo moderado" },{ value: "3", label: "Consumo elevado" }];
@@ -52,14 +59,6 @@ function NumberInput({ value, onChange, min, max, placeholder }) {
   return <input type="number" value={value} onChange={(e) => onChange(e.target.value)} min={min} max={max} placeholder={placeholder} style={inputStyle} />;
 }
 
-function TextInput({ value, onChange, placeholder }) {
-  return <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={inputStyle} />;
-}
-
-function TextArea({ value, onChange, placeholder }) {
-  return <textarea value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={3} style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5 }} />;
-}
-
 function ToggleChip({ label, selected, onClick }) {
   return <button onClick={onClick} style={{ background: selected ? "#00c9a7" : "#1a2233", border: `1.5px solid ${selected ? "#00c9a7" : "#2a3a55"}`, borderRadius: 20, color: selected ? "#000" : "#e2e8f0", padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", marginRight: 8, marginBottom: 8 }}>{label}</button>;
 }
@@ -73,27 +72,15 @@ export default function App() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef(null);
-
-  const [form, setForm] = useState({
-    age: "", gender: "2", height: "", weight: "",
-    smoke: "0", alco: "0", active: "1",
-    family_history: "Nenhum", cancer_concern: [],
-    doencas: [], doencas_outros: "", medicamentos: "",
-    alimentos_risco: [], alimentos_outros: "",
-  });
+  const [form, setForm] = useState({ age: "", gender: "2", height: "", weight: "", bp_cat: "normal", cholesterol: "1", gluc: "1", smoke: "0", alco: "0", active: "1", cardio: "0", family_history: "Nenhum", cancer_concern: [] });
 
   const setField = (key) => (val) => setForm((f) => ({ ...f, [key]: val }));
-  const toggleItem = (key, item) => setForm((f) => ({ ...f, [key]: f[key].includes(item) ? f[key].filter((x) => x !== item) : [...f[key], item] }));
-
+  const toggleConcern = (type) => setForm((f) => ({ ...f, cancer_concern: f.cancer_concern.includes(type) ? f.cancer_concern.filter((x) => x !== type) : [...f.cancer_concern, type] }));
   const calcBMI = () => { const h = parseFloat(form.height), w = parseFloat(form.weight); if (h > 0 && w > 0) return (w / Math.pow(h / 100, 2)).toFixed(1); return null; };
   const bmi = calcBMI();
   const bmiLabel = !bmi ? "" : bmi < 18.5 ? "Abaixo do peso" : bmi < 25 ? "Peso normal" : bmi < 30 ? "Sobrepeso" : "Obesidade";
 
-  const buildPrompt = () => {
-    const doencasCompletas = [...form.doencas, ...(form.doencas_outros ? [form.doencas_outros] : [])];
-    const alimentosCompletos = [...form.alimentos_risco, ...(form.alimentos_outros ? [form.alimentos_outros] : [])];
-    return `Voce e um sistema especialista em oncologia preventiva. Retorne APENAS um JSON valido, sem texto antes ou depois, sem markdown.\n\nEstrutura:\n{"risk_score":<0-100>,"risk_level":"<Baixo|Moderado|Elevado>","top_cancer_risks":[{"type":"<tipo>","risk":"<Baixo|Moderado|Elevado>","reason":"<motivo>"}],"key_factors":["<fator>"],"protective_factors":["<fator>"],"recommendations":[{"priority":"<Alta|Media|Baixa>","action":"<acao>","timeframe":"<prazo>"}],"summary":"<3-4 frases>","disclaimer":"Este resultado e apenas uma estimativa e NAO substitui avaliacao medica."}\n\nPACIENTE:\n- Idade: ${form.age} anos, Genero: ${form.gender === "1" ? "Feminino" : "Masculino"}\n- Altura: ${form.height}cm, Peso: ${form.weight}kg, IMC: ${bmi || "nao informado"} (${bmiLabel})\n- Antecedentes pessoais: ${doencasCompletas.length > 0 ? doencasCompletas.join(", ") : "Nenhum relatado"}\n- Medicamentos em uso: ${form.medicamentos || "Nenhum"}\n- Tabagismo: ${SMOKE_OPTS.find(o=>o.value===form.smoke)?.label}, Alcool: ${ALCO_OPTS.find(o=>o.value===form.alco)?.label}\n- Ativo: ${form.active==="1"?"Sim":"Nao"}\n- Habitos alimentares de risco: ${alimentosCompletos.length > 0 ? alimentosCompletos.join(", ") : "Nenhum relatado"}\n- Historico familiar: ${form.family_history}\n- Preocupacoes: ${form.cancer_concern.join(", ")||"Nenhuma"}\n\nConsidere: pressao alta aumenta risco renal, diabetes aumenta risco pancreatico e colorretal, dislipidemia associada a cancer de figado, hipotireoidismo associado a tireoide, embutidos e ultraprocessados aumentam risco colorretal. Responda SOMENTE com o JSON:`;
-  };
+  const buildPrompt = () => `Voce e um sistema especialista em oncologia preventiva. Retorne APENAS um JSON valido, sem texto antes ou depois, sem markdown.\n\nEstrutura:\n{"risk_score":<0-100>,"risk_level":"<Baixo|Moderado|Elevado>","top_cancer_risks":[{"type":"<tipo>","risk":"<Baixo|Moderado|Elevado>","reason":"<motivo>"}],"key_factors":["<fator>"],"protective_factors":["<fator>"],"recommendations":[{"priority":"<Alta|Media|Baixa>","action":"<acao>","timeframe":"<prazo>"}],"summary":"<3-4 frases>","disclaimer":"Este resultado e apenas uma estimativa e NAO substitui avaliacao medica."}\n\nPACIENTE:\n- Idade: ${form.age} anos, Genero: ${form.gender === "1" ? "Feminino" : "Masculino"}\n- Altura: ${form.height}cm, Peso: ${form.weight}kg, IMC: ${bmi || "nao informado"} (${bmiLabel})\n- Pressao: ${BP_CATS.find(o=>o.value===form.bp_cat)?.label}, Colesterol: ${CHOLESTEROL_OPTS.find(o=>o.value===form.cholesterol)?.label}, Glicemia: ${GLUC_OPTS.find(o=>o.value===form.gluc)?.label}\n- Tabagismo: ${SMOKE_OPTS.find(o=>o.value===form.smoke)?.label}, Alcool: ${ALCO_OPTS.find(o=>o.value===form.alco)?.label}\n- Ativo: ${form.active==="1"?"Sim":"Nao"}, DCV: ${form.cardio==="1"?"Sim":"Nao"}\n- Historico familiar: ${form.family_history}\n- Preocupacoes: ${form.cancer_concern.join(", ")||"Nenhuma"}\n\nResponda SOMENTE com o JSON:`;
 
   const callAPI = async (body) => {
     const response = await fetch(`${API_BASE}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -133,7 +120,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1e", color: "#e2e8f0", fontFamily: "'DM Sans', sans-serif", overflowX: "hidden" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap'); *{box-sizing:border-box} @keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}} @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}} .fade-up{animation:fadeUp 0.5s ease forwards} input:focus,select:focus,textarea:focus{border-color:#00c9a7!important;outline:none} button:hover{filter:brightness(1.1)}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap'); *{box-sizing:border-box} @keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}} @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}} .fade-up{animation:fadeUp 0.5s ease forwards} input:focus,select:focus{border-color:#00c9a7!important} button:hover{filter:brightness(1.1)}`}</style>
 
       <div style={{ background: "linear-gradient(180deg,#0d1425 0%,#0a0f1e 100%)", borderBottom: "1px solid #2a3a55", padding: "16px 24px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#00c9a7,#4f8ef7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🧬</div>
@@ -151,14 +138,13 @@ export default function App() {
       </div>
 
       <div style={{ maxWidth: 960, margin: "0 auto", padding: "24px 16px" }}>
-
         {step === 0 && (
           <div className="fade-up" style={{ textAlign: "center", padding: "60px 20px" }}>
             <div style={{ fontSize: 64, marginBottom: 16 }}>🧬</div>
             <h1 style={{ fontSize: 40, fontWeight: 800, background: "linear-gradient(135deg,#00c9a7,#4f8ef7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: 12 }}>OncoPrev AI</h1>
-            <p style={{ fontSize: 18, color: "#64748b", maxWidth: 520, margin: "0 auto 32px", lineHeight: 1.6 }}>Sistema preditivo de risco oncologico integrando antecedentes pessoais, habitos de vida e epidemiologia global.</p>
+            <p style={{ fontSize: 18, color: "#64748b", maxWidth: 520, margin: "0 auto 32px", lineHeight: 1.6 }}>Sistema preditivo de risco oncologico integrando dados cardiovasculares, habitos de vida e epidemiologia global.</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, maxWidth: 600, margin: "0 auto 40px" }}>
-              {[{ icon: "🏥", label: "Antecedentes Pessoais", desc: "Doencas previas e medicamentos" },{ icon: "🍽️", label: "Habitos de Vida", desc: "Alimentacao, alcool, tabagismo" },{ icon: "🌍", label: "Epidemiologia Global", desc: "190+ paises, 29 tipos de cancer" }].map((f) => (
+              {[{ icon: "❤️", label: "Dados Cardiovasculares", desc: "Pressao arterial, colesterol, IMC" },{ icon: "🍷", label: "Habitos de Vida", desc: "Alcool, tabagismo, atividade fisica" },{ icon: "🌍", label: "Epidemiologia Global", desc: "190+ paises, 29 tipos de cancer" }].map((f) => (
                 <div key={f.label} style={{ ...cardStyle, textAlign: "left" }}><div style={{ fontSize: 28, marginBottom: 8 }}>{f.icon}</div><div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{f.label}</div><div style={{ fontSize: 12, color: "#64748b" }}>{f.desc}</div></div>
               ))}
             </div>
@@ -182,22 +168,14 @@ export default function App() {
                   </div>
                   {bmi && <div style={{ background: "#111827", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#00c9a7", fontWeight: 600 }}>IMC: {bmi} — {bmiLabel}</div>}
                 </div>
-
                 <div style={cardStyle}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#4f8ef7", marginBottom: 8, display: "flex", alignItems: "center" }}><GlowDot color="#4f8ef7" />Antecedentes Pessoais</div>
-                  <p style={{ fontSize: 12, color: "#64748b", marginBottom: 12 }}>Selecione as doencas que voce ja tem ou teve:</p>
-                  <div style={{ display: "flex", flexWrap: "wrap", marginBottom: 12 }}>
-                    {DOENCAS_COMUNS.map((d) => <ToggleChip key={d} label={d} selected={form.doencas.includes(d)} onClick={() => toggleItem("doencas", d)} />)}
-                  </div>
-                  <Field label="Outras doencas (escreva aqui)">
-                    <TextInput value={form.doencas_outros} onChange={setField("doencas_outros")} placeholder="Ex: lupus, fibromialgia, artrite..." />
-                  </Field>
-                  <Field label="Medicamentos que toma atualmente">
-                    <TextArea value={form.medicamentos} onChange={setField("medicamentos")} placeholder="Ex: metformina, losartana, sinvastatina, insulina..." />
-                  </Field>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#4f8ef7", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot color="#4f8ef7" />Dados Cardiovasculares</div>
+                  <Field label="Pressao Arterial"><Select value={form.bp_cat} onChange={setField("bp_cat")} options={BP_CATS} /></Field>
+                  <Field label="Colesterol"><Select value={form.cholesterol} onChange={setField("cholesterol")} options={CHOLESTEROL_OPTS} /></Field>
+                  <Field label="Glicemia"><Select value={form.gluc} onChange={setField("gluc")} options={GLUC_OPTS} /></Field>
+                  <Field label="Doenca Cardiovascular Previa"><Select value={form.cardio} onChange={setField("cardio")} options={[{ value: "0", label: "Nao" },{ value: "1", label: "Sim" }]} /></Field>
                 </div>
               </div>
-
               <div>
                 <div style={cardStyle}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#f97316", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot color="#f97316" />Habitos de Vida</div>
@@ -205,30 +183,13 @@ export default function App() {
                   <Field label="Consumo de Alcool"><Select value={form.alco} onChange={setField("alco")} options={ALCO_OPTS} /></Field>
                   <Field label="Atividade Fisica"><Select value={form.active} onChange={setField("active")} options={[{ value: "1", label: "Ativo (>=150 min/semana)" },{ value: "0", label: "Sedentario" }]} /></Field>
                 </div>
-
                 <div style={cardStyle}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#f59e0b", marginBottom: 8, display: "flex", alignItems: "center" }}><GlowDot color="#f59e0b" />Habitos Alimentares</div>
-                  <p style={{ fontSize: 12, color: "#64748b", marginBottom: 12 }}>Selecione o que faz parte da sua alimentacao habitual:</p>
-                  <div style={{ display: "flex", flexWrap: "wrap", marginBottom: 12 }}>
-                    {ALIMENTOS_RISCO.map((a) => <ToggleChip key={a} label={a} selected={form.alimentos_risco.includes(a)} onClick={() => toggleItem("alimentos_risco", a)} />)}
-                  </div>
-                  <Field label="Outros habitos alimentares">
-                    <TextInput value={form.alimentos_outros} onChange={setField("alimentos_outros")} placeholder="Ex: vegetariano, dieta mediterranea..." />
-                  </Field>
-                </div>
-
-                <div style={cardStyle}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#ef4444", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot color="#ef4444" />Historico & Preocupacoes</div>
-                  <Field label="Historico Familiar de Cancer"><Select value={form.family_history} onChange={setField("family_history")} options={FAMILY_HISTORY.map((h) => ({ value: h, label: h }))} /></Field>
-                  <Field label="Tipos de cancer que mais te preocupam">
-                    <div style={{ display: "flex", flexWrap: "wrap", marginTop: 4 }}>
-                      {CANCER_TYPES.map((t) => <ToggleChip key={t} label={t} selected={form.cancer_concern.includes(t)} onClick={() => toggleItem("cancer_concern", t)} />)}
-                    </div>
-                  </Field>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#f59e0b", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot color="#f59e0b" />Historico & Preocupacoes</div>
+                  <Field label="Historico Familiar"><Select value={form.family_history} onChange={setField("family_history")} options={FAMILY_HISTORY.map((h) => ({ value: h, label: h }))} /></Field>
+                  <Field label="Preocupacoes"><div style={{ display: "flex", flexWrap: "wrap", marginTop: 4 }}>{CANCER_TYPES.map((t) => <ToggleChip key={t} label={t} selected={form.cancer_concern.includes(t)} onClick={() => toggleConcern(t)} />)}</div></Field>
                 </div>
               </div>
             </div>
-
             {error && <div style={{ background: "#ef444422", border: "1px solid #ef4444", borderRadius: 10, padding: "12px 16px", color: "#ef4444", fontSize: 14, marginBottom: 16 }}>{error}</div>}
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 8 }}>
               <button onClick={() => setStep(0)} style={{ background: "transparent", border: "1px solid #2a3a55", borderRadius: 10, color: "#64748b", padding: "12px 24px", cursor: "pointer", fontSize: 14 }}>← Voltar</button>
@@ -288,4 +249,5 @@ export default function App() {
     </div>
   );
 }
+
 
