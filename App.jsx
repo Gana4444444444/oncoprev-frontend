@@ -292,13 +292,14 @@ export default function App() {
                   <Field label="Historico Familiar de Cancer">
                     <Select value={form.family_history} onChange={setField("family_history")} options={FAMILY_HISTORY.map((h) => ({ value: h, label: h }))} />
                   </Field>
-                  <Field label="Tipos de cancer que mais te preocupam (selecione quantos quiser)">
+                  <div style={{ marginBottom: 16 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, display: "block" }}>Tipos de cancer que mais te preocupam</span>
                     <div style={{ display: "flex", flexWrap: "wrap", marginTop: 4 }}>
                       {CANCER_TYPES.map((t) => (
-                        <ToggleChip key={t} label={t} selected={form.cancer_concern.includes(t)} onClick={() => toggleItem("cancer_concern", t)} />
+                        <button type="button" key={t} onClick={() => toggleItem("cancer_concern", t)} style={{ background: form.cancer_concern.includes(t) ? "#00c9a7" : "#1a2233", border: `1.5px solid ${form.cancer_concern.includes(t) ? "#00c9a7" : "#2a3a55"}`, borderRadius: 20, color: form.cancer_concern.includes(t) ? "#000" : "#e2e8f0", padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", marginRight: 8, marginBottom: 8 }}>{t}</button>
                       ))}
                     </div>
-                  </Field>
+                  </div>
                 </div>
               </div>
             </div>
