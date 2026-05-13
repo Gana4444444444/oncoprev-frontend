@@ -62,7 +62,7 @@ function TextArea({ value, onChange, placeholder }) {
 
 function ToggleChip({ label, selected, onClick }) {
   return (
-    <button onClick={onClick} style={{ background: selected ? "#00c9a7" : "#1a2233", border: `1.5px solid ${selected ? "#00c9a7" : "#2a3a55"}`, borderRadius: 20, color: selected ? "#000" : "#e2e8f0", padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", marginRight: 8, marginBottom: 8, transition: "all 0.2s" }}>
+    <button type="button" onClick={onClick} style={{ background: selected ? "#00c9a7" : "#1a2233", border: `1.5px solid ${selected ? "#00c9a7" : "#2a3a55"}`, borderRadius: 20, color: selected ? "#000" : "#e2e8f0", padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", marginRight: 8, marginBottom: 8, transition: "all 0.2s" }}>
       {label}
     </button>
   );
