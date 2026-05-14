@@ -60,14 +60,6 @@ function TextArea({ value, onChange, placeholder }) {
   return <textarea value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={3} style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5 }} />;
 }
 
-function ToggleChip({ label, selected, onClick }) {
-  return (
-    <button type="button" onClick={onClick} style={{ background: selected ? "#00c9a7" : "#1a2233", border: `1.5px solid ${selected ? "#00c9a7" : "#2a3a55"}`, borderRadius: 20, color: selected ? "#000" : "#e2e8f0", padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", marginRight: 8, marginBottom: 8, transition: "all 0.2s" }}>
-      {label}
-    </button>
-  );
-}
-
 export default function App() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -78,19 +70,31 @@ export default function App() {
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef(null);
 
-  const [cancerConcern, setCancerConcern] = useState([]); const [form, setForm] = useState({
+  const [cancerConcern, setCancerConcern] = useState([]);
+  const [doencas, setDoencas] = useState([]);
+  const [alimentosRisco, setAlimentosRisco] = useState([]);
+
+  const [form, setForm] = useState({
     age: "", gender: "2", height: "", weight: "",
     smoke: "0", alco: "0", active: "1",
     family_history: "Nenhum",
-    doencas: [], doencas_outros: "", medicamentos: "",
-    alimentos_risco: [], alimentos_outros: "",
+    doencas_outros: "", medicamentos: "",
+    alimentos_outros: "",
   });
 
   const setField = (key) => (val) => setForm((f) => ({ ...f, [key]: val }));
-  const toggleItem = (key, item) => setForm((f) => ({
-    ...f,
-    [key]: f[key].includes(item) ? f[key].filter((x) => x !== item) : [...f[key], item]
-  }));
+
+  const toggleCancer = (item) => {
+    setCancerConcern(prev => prev.includes(item) ? prev.filter(x => x !== item) : [...prev, item]);
+  };
+
+  const toggleDoenca = (item) => {
+    setDoencas(prev => prev.includes(item) ? prev.filter(x => x !== item) : [...prev, item]);
+  };
+
+  const toggleAlimento = (item) => {
+    setAlimentosRisco(prev => prev.includes(item) ? prev.filter(x => x !== item) : [...prev, item]);
+  };
 
   const calcBMI = () => {
     const h = parseFloat(form.height), w = parseFloat(form.weight);
@@ -100,10 +104,24 @@ export default function App() {
   const bmi = calcBMI();
   const bmiLabel = !bmi ? "" : bmi < 18.5 ? "Abaixo do peso" : bmi < 25 ? "Peso normal" : bmi < 30 ? "Sobrepeso" : "Obesidade";
 
+  const chipStyle = (selected) => ({
+    background: selected ? "#00c9a7" : "#1a2233",
+    border: `1.5px solid ${selected ? "#00c9a7" : "#2a3a55"}`,
+    borderRadius: 20,
+    color: selected ? "#000" : "#e2e8f0",
+    padding: "6px 14px",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+    marginRight: 8,
+    marginBottom: 8,
+    display: "inline-block",
+  });
+
   const buildPrompt = () => {
-    const doencasCompletas = [...form.doencas, ...(form.doencas_outros ? [form.doencas_outros] : [])];
-    const alimentosCompletos = [...form.alimentos_risco, ...(form.alimentos_outros ? [form.alimentos_outros] : [])];
-    return `Voce e um sistema especialista em oncologia preventiva. Retorne APENAS um JSON valido, sem texto antes ou depois, sem markdown.\n\nEstrutura:\n{"risk_score":<0-100>,"risk_level":"<Baixo|Moderado|Elevado>","top_cancer_risks":[{"type":"<tipo>","risk":"<Baixo|Moderado|Elevado>","reason":"<motivo>"}],"key_factors":["<fator>"],"protective_factors":["<fator>"],"recommendations":[{"priority":"<Alta|Media|Baixa>","action":"<acao>","timeframe":"<prazo>"}],"summary":"<3-4 frases>","disclaimer":"Este resultado e apenas uma estimativa e NAO substitui avaliacao medica."}\n\nPACIENTE:\n- Idade: ${form.age} anos, Genero: ${form.gender === "1" ? "Feminino" : "Masculino"}\n- Altura: ${form.height}cm, Peso: ${form.weight}kg, IMC: ${bmi || "nao informado"} (${bmiLabel})\n- Antecedentes pessoais: ${doencasCompletas.length > 0 ? doencasCompletas.join(", ") : "Nenhum relatado"}\n- Medicamentos em uso: ${form.medicamentos || "Nenhum"}\n- Tabagismo: ${SMOKE_OPTS.find(o => o.value === form.smoke)?.label}, Alcool: ${ALCO_OPTS.find(o => o.value === form.alco)?.label}\n- Ativo: ${form.active === "1" ? "Sim" : "Nao"}\n- Habitos alimentares de risco: ${alimentosCompletos.length > 0 ? alimentosCompletos.join(", ") : "Nenhum relatado"}\n- Historico familiar: ${form.family_history}\n- Preocupacoes com cancer: ${form.cancer_concern.join(", ") || "Nenhuma"}\n\nConsidere: pressao alta aumenta risco renal, diabetes aumenta risco pancreatico e colorretal, dislipidemia associada a cancer de figado, hipotireoidismo associado a tireoide, embutidos e ultraprocessados aumentam risco colorretal. Responda SOMENTE com o JSON:`;
+    const doencasCompletas = [...doencas, ...(form.doencas_outros ? [form.doencas_outros] : [])];
+    const alimentosCompletos = [...alimentosRisco, ...(form.alimentos_outros ? [form.alimentos_outros] : [])];
+    return `Voce e um sistema especialista em oncologia preventiva. Retorne APENAS um JSON valido, sem texto antes ou depois, sem markdown.\n\nEstrutura:\n{"risk_score":<0-100>,"risk_level":"<Baixo|Moderado|Elevado>","top_cancer_risks":[{"type":"<tipo>","risk":"<Baixo|Moderado|Elevado>","reason":"<motivo>"}],"key_factors":["<fator>"],"protective_factors":["<fator>"],"recommendations":[{"priority":"<Alta|Media|Baixa>","action":"<acao>","timeframe":"<prazo>"}],"summary":"<3-4 frases>","disclaimer":"Este resultado e apenas uma estimativa e NAO substitui avaliacao medica."}\n\nPACIENTE:\n- Idade: ${form.age} anos, Genero: ${form.gender === "1" ? "Feminino" : "Masculino"}\n- Altura: ${form.height}cm, Peso: ${form.weight}kg, IMC: ${bmi || "nao informado"} (${bmiLabel})\n- Antecedentes pessoais: ${doencasCompletas.length > 0 ? doencasCompletas.join(", ") : "Nenhum relatado"}\n- Medicamentos em uso: ${form.medicamentos || "Nenhum"}\n- Tabagismo: ${SMOKE_OPTS.find(o => o.value === form.smoke)?.label}, Alcool: ${ALCO_OPTS.find(o => o.value === form.alco)?.label}\n- Ativo: ${form.active === "1" ? "Sim" : "Nao"}\n- Habitos alimentares de risco: ${alimentosCompletos.length > 0 ? alimentosCompletos.join(", ") : "Nenhum relatado"}\n- Historico familiar: ${form.family_history}\n- Preocupacoes com cancer: ${cancerConcern.join(", ") || "Nenhuma"}\n\nConsidere: pressao alta aumenta risco renal, diabetes aumenta risco pancreatico e colorretal, dislipidemia associada a cancer de figado, hipotireoidismo associado a tireoide, embutidos e ultraprocessados aumentam risco colorretal. Responda SOMENTE com o JSON:`;
   };
 
   const callAPI = async (body) => {
@@ -171,7 +189,6 @@ export default function App() {
         }
       `}</style>
 
-      {/* Header */}
       <div className="header-inner" style={{ background: "linear-gradient(180deg,#0d1425 0%,#0a0f1e 100%)", borderBottom: "1px solid #2a3a55", padding: "16px 24px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#00c9a7,#4f8ef7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🧬</div>
         <div>
@@ -189,7 +206,6 @@ export default function App() {
 
       <div className="page-pad" style={{ maxWidth: 960, margin: "0 auto", padding: "24px 16px" }}>
 
-        {/* STEP 0: Intro */}
         {step === 0 && (
           <div className="fade-up hero-wrap" style={{ textAlign: "center", padding: "60px 20px" }}>
             <div style={{ fontSize: 64, marginBottom: 16 }}>🧬</div>
@@ -217,7 +233,6 @@ export default function App() {
           </div>
         )}
 
-        {/* STEP 1: Form */}
         {step === 1 && (
           <div className="fade-up">
             <div style={{ marginBottom: 24 }}>
@@ -226,9 +241,7 @@ export default function App() {
             </div>
 
             <div className="grid-2col">
-              {/* Coluna esquerda */}
               <div>
-                {/* Dados Pessoais */}
                 <div style={cardStyle}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#00c9a7", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot />Dados Pessoais</div>
                   <Field label="Idade"><NumberInput value={form.age} onChange={setField("age")} min={1} max={120} placeholder="Ex: 45" /></Field>
@@ -242,13 +255,12 @@ export default function App() {
                   {bmi && <div style={{ background: "#111827", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#00c9a7", fontWeight: 600 }}>IMC: {bmi} — {bmiLabel}</div>}
                 </div>
 
-                {/* Antecedentes Pessoais */}
                 <div style={cardStyle}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#4f8ef7", marginBottom: 8, display: "flex", alignItems: "center" }}><GlowDot color="#4f8ef7" />Antecedentes Pessoais</div>
                   <p style={{ fontSize: 12, color: "#64748b", marginBottom: 12 }}>Selecione as doencas que voce ja tem ou teve:</p>
                   <div style={{ display: "flex", flexWrap: "wrap", marginBottom: 12 }}>
                     {DOENCAS_COMUNS.map((d) => (
-                      <ToggleChip key={d} label={d} selected={form.doencas.includes(d)} onClick={() => toggleItem("doencas", d)} />
+                      <span key={d} onClick={() => toggleDoenca(d)} style={chipStyle(doencas.includes(d))}>{d}</span>
                     ))}
                   </div>
                   <Field label="Outras doencas (escreva aqui)">
@@ -260,9 +272,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Coluna direita */}
               <div>
-                {/* Habitos de Vida */}
                 <div style={cardStyle}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#f97316", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot color="#f97316" />Habitos de Vida</div>
                   <Field label="Tabagismo"><Select value={form.smoke} onChange={setField("smoke")} options={SMOKE_OPTS} /></Field>
@@ -272,146 +282,7 @@ export default function App() {
                   </Field>
                 </div>
 
-                {/* Habitos Alimentares */}
                 <div style={cardStyle}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#f59e0b", marginBottom: 8, display: "flex", alignItems: "center" }}><GlowDot color="#f59e0b" />Habitos Alimentares</div>
                   <p style={{ fontSize: 12, color: "#64748b", marginBottom: 12 }}>Selecione o que faz parte da sua alimentacao habitual:</p>
-                  <div style={{ display: "flex", flexWrap: "wrap", marginBottom: 12 }}>
-                    {ALIMENTOS_RISCO.map((a) => (
-                      <ToggleChip key={a} label={a} selected={form.alimentos_risco.includes(a)} onClick={() => toggleItem("alimentos_risco", a)} />
-                    ))}
-                  </div>
-                  <Field label="Outros habitos alimentares">
-                    <TextInput value={form.alimentos_outros} onChange={setField("alimentos_outros")} placeholder="Ex: vegetariano, dieta mediterranea..." />
-                  </Field>
-                </div>
-
-                {/* Historico & Preocupacoes */}
-                <div style={cardStyle}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#ef4444", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot color="#ef4444" />Historico & Preocupacoes</div>
-                  <Field label="Historico Familiar de Cancer">
-                    <Select value={form.family_history} onChange={setField("family_history")} options={FAMILY_HISTORY.map((h) => ({ value: h, label: h }))} />
-                  </Field>
-                  <div style={{ marginBottom: 16 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6, display: "block" }}>Tipos de cancer que mais te preocupam</span>
-                    <div style={{ display: "flex", flexWrap: "wrap", marginTop: 4 }}>
-                      {CANCER_TYPES.map((t) => (
-                        <button type="button" key={t} onClick={() => toggleItem("cancer_concern", t)} style={{ background: form.cancer_concern.includes(t) ? "#00c9a7" : "#1a2233", border: `1.5px solid ${form.cancer_concern.includes(t) ? "#00c9a7" : "#2a3a55"}`, borderRadius: 20, color: form.cancer_concern.includes(t) ? "#000" : "#e2e8f0", padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", marginRight: 8, marginBottom: 8 }}>{t}</button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {error && <div style={{ background: "#ef444422", border: "1px solid #ef4444", borderRadius: 10, padding: "12px 16px", color: "#ef4444", fontSize: 14, marginBottom: 16 }}>{error}</div>}
-
-            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 8 }}>
-              <button onClick={() => setStep(0)} style={{ background: "transparent", border: "1px solid #2a3a55", borderRadius: 10, color: "#64748b", padding: "12px 24px", cursor: "pointer", fontSize: 14 }}>← Voltar</button>
-              <button onClick={handleAnalyze} disabled={loading} style={{ background: loading ? "#2a3a55" : "linear-gradient(135deg,#00c9a7,#4f8ef7)", border: "none", borderRadius: 10, color: loading ? "#64748b" : "#000", fontWeight: 700, fontSize: 15, padding: "12px 32px", cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 10 }}>
-                {loading ? <><Spinner /> Analisando...</> : "Gerar Analise →"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 2: Results */}
-        {step === 2 && result && (
-          <div className="fade-up">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-              <div><h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 4 }}>Relatorio de Risco Oncologico</h2><p style={{ color: "#64748b", fontSize: 14 }}>Analise gerada por IA</p></div>
-              <button onClick={() => { setStep(1); setResult(null); setError(null); }} style={{ background: "transparent", border: "1px solid #2a3a55", borderRadius: 10, color: "#64748b", padding: "8px 20px", cursor: "pointer", fontSize: 13 }}>← Nova Analise</button>
-            </div>
-
-            <div className="result-grid">
-              <div style={{ ...cardStyle, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", marginBottom: 0 }}>
-                <RiskGauge score={result.risk_score} />
-                <div style={{ marginTop: 16, fontSize: 13, color: "#64748b", textAlign: "center", lineHeight: 1.5 }}>{result.summary}</div>
-              </div>
-              <div style={{ ...cardStyle, marginBottom: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#ef4444", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot color="#ef4444" />Fatores de Risco</div>
-                {result.key_factors?.map((f, i) => (
-                  <div key={i} style={{ display: "flex", gap: 10, marginBottom: 10, padding: "10px 12px", background: "#ef444411", borderRadius: 8, borderLeft: "3px solid #ef4444" }}>
-                    <span>⚠️</span><span style={{ fontSize: 13 }}>{f}</span>
-                  </div>
-                ))}
-                {result.protective_factors?.length > 0 && <>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#22c55e", marginTop: 16, marginBottom: 12, display: "flex", alignItems: "center" }}><GlowDot color="#22c55e" />Fatores Protetores</div>
-                  {result.protective_factors.map((f, i) => (
-                    <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8, padding: "8px 12px", background: "#22c55e11", borderRadius: 8, borderLeft: "3px solid #22c55e" }}>
-                      <span>✅</span><span style={{ fontSize: 13 }}>{f}</span>
-                    </div>
-                  ))}
-                </>}
-              </div>
-            </div>
-
-            {result.top_cancer_risks?.length > 0 && (
-              <div style={cardStyle}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#4f8ef7", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot color="#4f8ef7" />Riscos por Tipo de Cancer</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 12 }}>
-                  {result.top_cancer_risks.map((r, i) => {
-                    const rc = r.risk === "Elevado" ? "#ef4444" : r.risk === "Moderado" ? "#f59e0b" : "#22c55e";
-                    return (
-                      <div key={i} style={{ background: "#111827", borderRadius: 10, padding: "12px 14px", border: `1px solid ${rc}44` }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                          <span style={{ fontWeight: 600, fontSize: 13 }}>{r.type}</span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: rc, background: `${rc}22`, padding: "2px 10px", borderRadius: 20 }}>{r.risk}</span>
-                        </div>
-                        <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>{r.reason}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {result.recommendations?.length > 0 && (
-              <div style={cardStyle}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#00c9a7", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot />Recomendacoes Clinicas</div>
-                {result.recommendations.map((rec, i) => {
-                  const pc = rec.priority === "Alta" ? "#ef4444" : rec.priority === "Media" ? "#f59e0b" : "#22c55e";
-                  return (
-                    <div key={i} style={{ display: "flex", gap: 14, padding: "12px 0", borderBottom: i < result.recommendations.length - 1 ? "1px solid #2a3a55" : "none" }}>
-                      <div style={{ width: 52, flexShrink: 0 }}><span style={{ fontSize: 10, fontWeight: 800, color: pc, background: `${pc}22`, padding: "3px 7px", borderRadius: 6 }}>{rec.priority}</span></div>
-                      <div><div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{rec.action}</div><div style={{ fontSize: 12, color: "#64748b" }}>⏱ {rec.timeframe}</div></div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <div style={{ background: "#f59e0b11", border: "1px solid #f59e0b44", borderRadius: 12, padding: "14px 18px", fontSize: 12, color: "#f59e0b", marginBottom: 20 }}>⚠️ {result.disclaimer}</div>
-
-            {/* Chat */}
-            <div style={cardStyle}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#00c9a7", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot />Consultor AI</div>
-              <div style={{ background: "#111827", borderRadius: 10, padding: 16, minHeight: 180, maxHeight: 320, overflowY: "auto", marginBottom: 12, display: "flex", flexDirection: "column", gap: 12 }}>
-                {chatHistory.map((msg, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
-                    <div style={{ maxWidth: "80%", background: msg.role === "user" ? "linear-gradient(135deg,#00c9a7,#4f8ef7)" : "#1a2233", color: msg.role === "user" ? "#000" : "#e2e8f0", borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px", padding: "10px 14px", fontSize: 13, lineHeight: 1.5 }}>
-                      {msg.content}
-                    </div>
-                  </div>
-                ))}
-                {chatLoading && (
-                  <div style={{ display: "flex", gap: 6, padding: "8px 14px" }}>
-                    {[0, 1, 2].map((d) => <div key={d} style={{ width: 8, height: 8, borderRadius: "50%", background: "#00c9a7", animation: `pulse 1.2s ${d * 0.2}s infinite` }} />)}
-                  </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-              <div style={{ display: "flex", gap: 10 }}>
-                <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleChat()} placeholder="Faca uma pergunta sobre os resultados..." style={{ ...inputStyle, flex: 1 }} />
-                <button onClick={handleChat} disabled={chatLoading || !chatInput.trim()} style={{ background: chatLoading || !chatInput.trim() ? "#2a3a55" : "linear-gradient(135deg,#00c9a7,#4f8ef7)", border: "none", borderRadius: 10, color: chatLoading || !chatInput.trim() ? "#64748b" : "#000", fontWeight: 700, fontSize: 14, padding: "10px 20px", cursor: chatLoading || !chatInput.trim() ? "not-allowed" : "pointer", whiteSpace: "nowrap" }}>
-                  Enviar →
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
+               
