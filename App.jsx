@@ -285,4 +285,139 @@ export default function App() {
                 <div style={cardStyle}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#f59e0b", marginBottom: 8, display: "flex", alignItems: "center" }}><GlowDot color="#f59e0b" />Habitos Alimentares</div>
                   <p style={{ fontSize: 12, color: "#64748b", marginBottom: 12 }}>Selecione o que faz parte da sua alimentacao habitual:</p>
-               
+                  <div style={{ display: "flex", flexWrap: "wrap", marginBottom: 12 }}>
+                    {ALIMENTOS_RISCO.map((a) => (
+                      <span key={a} onClick={() => toggleAlimento(a)} style={chipStyle(alimentosRisco.includes(a))}>{a}</span>
+                    ))}
+                  </div>
+                  <Field label="Outros habitos alimentares">
+                    <TextInput value={form.alimentos_outros} onChange={setField("alimentos_outros")} placeholder="Ex: vegetariano, dieta mediterranea..." />
+                  </Field>
+                </div>
+
+                <div style={cardStyle}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#ef4444", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot color="#ef4444" />Historico & Preocupacoes</div>
+                  <Field label="Historico Familiar de Cancer">
+                    <Select value={form.family_history} onChange={setField("family_history")} options={FAMILY_HISTORY.map((h) => ({ value: h, label: h }))} />
+                  </Field>
+                  <div style={{ marginBottom: 16 }}>
+                    <span style={labelStyle}>Tipos de cancer que mais te preocupam (selecione quantos quiser)</span>
+                    <div style={{ display: "flex", flexWrap: "wrap", marginTop: 4 }}>
+                      {CANCER_TYPES.map((t) => (
+                        <span key={t} onClick={() => toggleCancer(t)} style={chipStyle(cancerConcern.includes(t))}>{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {error && <div style={{ background: "#ef444422", border: "1px solid #ef4444", borderRadius: 10, padding: "12px 16px", color: "#ef4444", fontSize: 14, marginBottom: 16 }}>{error}</div>}
+
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 8 }}>
+              <button onClick={() => setStep(0)} style={{ background: "transparent", border: "1px solid #2a3a55", borderRadius: 10, color: "#64748b", padding: "12px 24px", cursor: "pointer", fontSize: 14 }}>← Voltar</button>
+              <button onClick={handleAnalyze} disabled={loading} style={{ background: loading ? "#2a3a55" : "linear-gradient(135deg,#00c9a7,#4f8ef7)", border: "none", borderRadius: 10, color: loading ? "#64748b" : "#000", fontWeight: 700, fontSize: 15, padding: "12px 32px", cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                {loading ? <><Spinner /> Analisando...</> : "Gerar Analise →"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && result && (
+          <div className="fade-up">
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+              <div><h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 4 }}>Relatorio de Risco Oncologico</h2><p style={{ color: "#64748b", fontSize: 14 }}>Analise gerada por IA</p></div>
+              <button onClick={() => { setStep(1); setResult(null); setError(null); }} style={{ background: "transparent", border: "1px solid #2a3a55", borderRadius: 10, color: "#64748b", padding: "8px 20px", cursor: "pointer", fontSize: 13 }}>← Nova Analise</button>
+            </div>
+
+            <div className="result-grid">
+              <div style={{ ...cardStyle, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", marginBottom: 0 }}>
+                <RiskGauge score={result.risk_score} />
+                <div style={{ marginTop: 16, fontSize: 13, color: "#64748b", textAlign: "center", lineHeight: 1.5 }}>{result.summary}</div>
+              </div>
+              <div style={{ ...cardStyle, marginBottom: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#ef4444", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot color="#ef4444" />Fatores de Risco</div>
+                {result.key_factors?.map((f, i) => (
+                  <div key={i} style={{ display: "flex", gap: 10, marginBottom: 10, padding: "10px 12px", background: "#ef444411", borderRadius: 8, borderLeft: "3px solid #ef4444" }}>
+                    <span>⚠️</span><span style={{ fontSize: 13 }}>{f}</span>
+                  </div>
+                ))}
+                {result.protective_factors?.length > 0 && <>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#22c55e", marginTop: 16, marginBottom: 12, display: "flex", alignItems: "center" }}><GlowDot color="#22c55e" />Fatores Protetores</div>
+                  {result.protective_factors.map((f, i) => (
+                    <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8, padding: "8px 12px", background: "#22c55e11", borderRadius: 8, borderLeft: "3px solid #22c55e" }}>
+                      <span>✅</span><span style={{ fontSize: 13 }}>{f}</span>
+                    </div>
+                  ))}
+                </>}
+              </div>
+            </div>
+
+            {result.top_cancer_risks?.length > 0 && (
+              <div style={cardStyle}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#4f8ef7", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot color="#4f8ef7" />Riscos por Tipo de Cancer</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 12 }}>
+                  {result.top_cancer_risks.map((r, i) => {
+                    const rc = r.risk === "Elevado" ? "#ef4444" : r.risk === "Moderado" ? "#f59e0b" : "#22c55e";
+                    return (
+                      <div key={i} style={{ background: "#111827", borderRadius: 10, padding: "12px 14px", border: `1px solid ${rc}44` }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <span style={{ fontWeight: 600, fontSize: 13 }}>{r.type}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: rc, background: `${rc}22`, padding: "2px 10px", borderRadius: 20 }}>{r.risk}</span>
+                        </div>
+                        <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>{r.reason}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {result.recommendations?.length > 0 && (
+              <div style={cardStyle}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#00c9a7", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot />Recomendacoes Clinicas</div>
+                {result.recommendations.map((rec, i) => {
+                  const pc = rec.priority === "Alta" ? "#ef4444" : rec.priority === "Media" ? "#f59e0b" : "#22c55e";
+                  return (
+                    <div key={i} style={{ display: "flex", gap: 14, padding: "12px 0", borderBottom: i < result.recommendations.length - 1 ? "1px solid #2a3a55" : "none" }}>
+                      <div style={{ width: 52, flexShrink: 0 }}><span style={{ fontSize: 10, fontWeight: 800, color: pc, background: `${pc}22`, padding: "3px 7px", borderRadius: 6 }}>{rec.priority}</span></div>
+                      <div><div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{rec.action}</div><div style={{ fontSize: 12, color: "#64748b" }}>⏱ {rec.timeframe}</div></div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div style={{ background: "#f59e0b11", border: "1px solid #f59e0b44", borderRadius: 12, padding: "14px 18px", fontSize: 12, color: "#f59e0b", marginBottom: 20 }}>⚠️ {result.disclaimer}</div>
+
+            <div style={cardStyle}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#00c9a7", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot />Consultor AI</div>
+              <div style={{ background: "#111827", borderRadius: 10, padding: 16, minHeight: 180, maxHeight: 320, overflowY: "auto", marginBottom: 12, display: "flex", flexDirection: "column", gap: 12 }}>
+                {chatHistory.map((msg, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start" }}>
+                    <div style={{ maxWidth: "80%", background: msg.role === "user" ? "linear-gradient(135deg,#00c9a7,#4f8ef7)" : "#1a2233", color: msg.role === "user" ? "#000" : "#e2e8f0", borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px", padding: "10px 14px", fontSize: 13, lineHeight: 1.5 }}>
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div style={{ display: "flex", gap: 6, padding: "8px 14px" }}>
+                    {[0, 1, 2].map((d) => <div key={d} style={{ width: 8, height: 8, borderRadius: "50%", background: "#00c9a7", animation: `pulse 1.2s ${d * 0.2}s infinite` }} />)}
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleChat()} placeholder="Faca uma pergunta sobre os resultados..." style={{ ...inputStyle, flex: 1 }} />
+                <button onClick={handleChat} disabled={chatLoading || !chatInput.trim()} style={{ background: chatLoading || !chatInput.trim() ? "#2a3a55" : "linear-gradient(135deg,#00c9a7,#4f8ef7)", border: "none", borderRadius: 10, color: chatLoading || !chatInput.trim() ? "#64748b" : "#000", fontWeight: 700, fontSize: 14, padding: "10px 20px", cursor: chatLoading || !chatInput.trim() ? "not-allowed" : "pointer", whiteSpace: "nowrap" }}>
+                  Enviar →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
