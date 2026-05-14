@@ -297,9 +297,12 @@ export default function App() {
 
                 <div style={cardStyle}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#ef4444", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot color="#ef4444" />Historico & Preocupacoes</div>
-                  <Field label="Historico Familiar de Cancer">
-                    <Select value={form.family_history} onChange={setField("family_history")} options={FAMILY_HISTORY.map((h) => ({ value: h, label: h }))} />
-                  </Field>
+                  <div style={{ marginBottom: 16 }}>
+  <span style={labelStyle}>Historico Familiar de Cancer (segure Ctrl para selecionar varios)</span>
+  <select multiple value={form.family_history} onChange={(e) => setField("family_history")([...e.target.selectedOptions].map(o => o.value))} style={{ ...inputStyle, height: 140 }}>
+    {FAMILY_HISTORY.map((h) => <option key={h} value={h}>{h}</option>)}
+  </select>
+</div>
                   <div style={{ marginBottom: 16 }}>
                     <span style={labelStyle}>Tipos de cancer que mais te preocupam (selecione quantos quiser)</span>
                     <div style={{ display: "flex", flexWrap: "wrap", marginTop: 4 }}>
