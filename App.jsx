@@ -77,7 +77,7 @@ export default function App() {
   const [form, setForm] = useState({
     age: "", gender: "2", height: "", weight: "",
     smoke: "0", alco: "0", active: "1",
-    family_history: "Nenhum",
+    family_history: [],
     doencas_outros: "", medicamentos: "",
     alimentos_outros: "",
   });
