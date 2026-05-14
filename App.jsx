@@ -298,10 +298,12 @@ export default function App() {
                 <div style={cardStyle}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#ef4444", marginBottom: 16, display: "flex", alignItems: "center" }}><GlowDot color="#ef4444" />Historico & Preocupacoes</div>
                   <div style={{ marginBottom: 16 }}>
-  <span style={labelStyle}>Historico Familiar de Cancer (segure Ctrl para selecionar varios)</span>
-  <select multiple value={form.family_history} onChange={(e) => setField("family_history")([...e.target.selectedOptions].map(o => o.value))} style={{ ...inputStyle, height: 140 }}>
-    {FAMILY_HISTORY.map((h) => <option key={h} value={h}>{h}</option>)}
-  </select>
+  <span style={labelStyle}>Historico Familiar de Cancer</span>
+  <div style={{ display: "flex", flexWrap: "wrap", marginTop: 4 }}>
+    {FAMILY_HISTORY.map((h) => (
+      <span key={h} onClick={() => setForm(f => ({ ...f, family_history: f.family_history.includes(h) ? f.family_history.filter(x => x !== h) : [...f.family_history, h] }))} style={chipStyle(form.family_history.includes(h))}>{h}</span>
+    ))}
+  </div>
 </div>
                   <div style={{ marginBottom: 16 }}>
                     <span style={labelStyle}>Tipos de cancer que mais te preocupam (selecione quantos quiser)</span>
