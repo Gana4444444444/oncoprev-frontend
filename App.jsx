@@ -78,10 +78,10 @@ export default function App() {
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef(null);
 
-  const [form, setForm] = useState({
+  const [cancerConcern, setCancerConcern] = useState([]); const [form, setForm] = useState({
     age: "", gender: "2", height: "", weight: "",
     smoke: "0", alco: "0", active: "1",
-    family_history: "Nenhum", cancer_concern: [],
+    family_history: "Nenhum",
     doencas: [], doencas_outros: "", medicamentos: "",
     alimentos_risco: [], alimentos_outros: "",
   });
